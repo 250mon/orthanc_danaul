@@ -1,0 +1,12 @@
+{
+  "Name": "Orthanc-modality",
+  "RemoteAccessAllowed": true,
+  "AuthenticationEnabled": true,
+  "RegisteredUsers": {
+    "demo": "demo"
+  },
+  "DicomAet": "MODALITY",
+  "DicomModalities": {
+    "pacs": ["PACS", "192.168.0.35", 4242] // to perform query-retrieve on the PACS
+  }
+}

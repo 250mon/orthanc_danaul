@@ -1,0 +1,13 @@
+services:
+  orthanc:
+    image: orthancteam/orthanc
+    restart: unless-stopped
+    ports: ["104:4242", "888:8042"]
+    volumes: ["orthanc-storage:/var/lib/orthanc/db:Z"]
+    environment:
+      ORTHANC__NAME: "My Orthanc"
+      ORTHANC__REGISTERED_USERS: |
+        {"demo": "demo"}
+
+volumes:
+  orthanc-storage:

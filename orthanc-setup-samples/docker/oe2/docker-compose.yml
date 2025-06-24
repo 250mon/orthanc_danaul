@@ -1,0 +1,112 @@
+services:
+
+  nginx:
+    build: nginx
+    depends_on: [orthanc-default, orthanc-custom, pacs]
+    restart: unless-stopped
+    ports: ["80:80"]
+
+
+  orthanc-custom:
+    # image: orthancteam/orthanc-pre-release:master-unstable
+    image: orthancteam/orthanc:24.11.0
+    volumes: ["orthanc-storage:/var/lib/orthanc/db"]
+    depends_on: [orthanc-db]
+    restart: unless-stopped
+    env_file:
+      - common-orthanc.env
+    environment:
+      ORTHANC_JSON: |
+        {
+          "Name": "Orthanc Customized",
+          "OrthancExplorer2" : {
+            "Theme": "Dark",
+            "UiOptions" : {
+              "StudyListSearchMode": "search-button",
+              "EnableLinkToLegacyUi": false,
+              "EnableApiViewMenu": true,
+              "ViewersIcons" : {
+                "osimis-web-viewer": "bi bi-eye",
+                "stone-webviewer": "bi bi-eye-fill",
+                "ohif": "bi bi-grid",
+                "ohif-vr": "bi bi-grid-1x2",
+                "ohif-tmtv": "bi bi-grid-3x3-gap",
+                "ohif-seg": "fa-solid fa-shapes fa-button",
+                "ohif-micro": "fa-solid fa-microscope fa-button",
+                "meddream": "bi bi-columns-gap",
+                "volview": "bi bi-box",
+                "wsi": "fa-solid fa-microscope fa-button"
+              },
+              "StudyListColumns" : [
+                "PatientBirthDate",
+                "PatientName",
+                "PatientID",
+                "StudyDescription",
+                "StudyDate",
+                "InstitutionName",
+                "modalities",
+                "AccessionNumber",
+                "seriesAndInstancesCount"
+              ],
+              "DateFormat": "dd/MM/yyyy"
+            }
+          },
+
+          "RegisteredUsers": {
+            "demo": "demo"
+          }
+        }
+
+  orthanc-default:
+    # image: orthancteam/orthanc-pre-release:master-unstable
+    image: orthancteam/orthanc:24.11.0
+    volumes: ["orthanc-storage:/var/lib/orthanc/db"]
+    depends_on: [orthanc-db]
+    restart: unless-stopped
+    env_file:
+      - common-orthanc.env
+    environment:
+      ORTHANC_JSON: |
+        {
+          "Name": "Orthanc default",
+          "OrthancExplorer2" : {
+          },
+
+          "AuthenticationEnabled": false
+        }
+
+
+  orthanc-db:
+    image: postgres:15
+    restart: unless-stopped
+    volumes: ["orthanc-db:/var/lib/postgresql/data"]
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: "trust"
+
+  pacs:
+    image: orthancteam/orthanc-pre-release:master-unstable
+    volumes: ["pacs-storage:/var/lib/orthanc/db"]
+    restart: unless-stopped
+    environment:
+      STONE_WEB_VIEWER_PLUGIN_ENABLED: "true"
+      OHIF_PLUGIN_ENABLED: "true"
+      DICOM_WEB_PLUGIN_ENABLED: "true"
+      ORTHANC_JSON: |
+        {
+          "Name": "PACS",
+          "DicomAet": "PACS",
+          "OrthancExplorer2" : {
+          },
+
+          "DicomModalities": {
+            "orthanc": ["ORTHANC", "orthanc-default", 4242]
+          },
+
+          "AuthenticationEnabled": false
+        }
+
+
+volumes:
+  orthanc-storage:
+  orthanc-db:
+  pacs-storage:

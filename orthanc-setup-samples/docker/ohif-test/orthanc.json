@@ -1,0 +1,6 @@
+{ 
+  "OHIF": {
+    "DataSource" : "dicom-web"
+  },
+  "AuthenticationEnabled": false
+}

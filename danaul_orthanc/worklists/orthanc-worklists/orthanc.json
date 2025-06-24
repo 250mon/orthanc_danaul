@@ -1,0 +1,29 @@
+{
+  "Name": "Orthanc-worklists",
+  "Plugins": [
+    ".",
+    "/usr/share/orthanc/plugins",
+    "/usr/local/share/orthanc/plugins"
+  ],
+  "RemoteAccessAllowed": true,
+  "AuthenticationEnabled": true,
+  "RegisteredUsers": {
+    "demo": "demo"
+  },
+  "DicomAet": "WORKLISTS",
+  "MPPSAet": "WORKLISTS",
+  "DicomPortMPPS": 5243,
+  "DicomModalities": {
+    "pacs": ["PACS", "192.168.0.35", 4242],
+    "XC70": ["XC70", "192.168.0.221", 104],
+    "VXVUE": ["VXVUE", "192.168.0.146", 104],
+    "Carm": ["SpiderStoreSCP", "192.168.0.222", 104],
+    "findscu": ["FINDSCU", "127.0.0.1", 1234]
+  },
+  "Python": {
+    "Path": "/etc/orthanc/plugins/worklist-with-mpps.py",
+    "Verbose": true,
+    "DisplayMemoryUsage": false,
+    "AlloweThreads": false
+  }
+}

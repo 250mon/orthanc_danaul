@@ -1,0 +1,10 @@
+services:
+
+  orthanc:
+    build: orthanc
+    ports: ["8042:8042"]
+    environment:
+      ORTHANC__NAME: "orthanc-custom-startup-scrtip"
+      VERBOSE_STARTUP: "true"
+      VERBOSE_ENABLED: "true"
+      BEFORE_ORTHANC_STARTUP_SCRIPT: "/scripts/startup.sh"

@@ -1,0 +1,8 @@
+services:
+
+  orthanc:
+    image: orthancteam/orthanc
+    ports: ["80:8042"]
+    environment:
+      ORTHANC__REGISTERED_USERS: |
+        {"demo": "demo"}

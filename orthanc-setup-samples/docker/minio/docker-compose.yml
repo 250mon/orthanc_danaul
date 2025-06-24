@@ -1,0 +1,40 @@
+services:
+
+    orthanc:
+        image: osimis/orthanc
+        ports: [8042:8042]
+        environment:
+            - ORTHANC__NAME=ORTHANC Minio demo
+            - ORTHANC__AWS_S3_STORAGE__BUCKET_NAME=my-sample-bucket
+            - ORTHANC__AWS_S3_STORAGE__REGION=eu-west-1
+            - ORTHANC__AWS_S3_STORAGE__ACCESS_KEY=minio
+            - ORTHANC__AWS_S3_STORAGE__SECRET_KEY=miniopwd
+            - ORTHANC__AWS_S3_STORAGE__ENDPOINT=http://minio:9000
+            - ORTHANC__AWS_S3_STORAGE__VIRTUAL_ADDRESSING=false
+            # - ORTHANC__AWS_S3_STORAGE__HYBRID_MODE=WriteToObjectStorage
+            # - ORTHANC__AWS_S3_STORAGE__HYBRID_MODE=WriteToFileSystem
+            - ORTHANC__AUTHENTICATION_ENABLED=false
+            - ORTHANC__DICOM_SERVER_ENABLED=false
+            - VERBOSE_ENABLED=true
+            - VERBOSE_STARTUP=true
+        volumes:
+            - orthanc-sqlite-storage:/var/lib/orthanc/db
+
+    minio:
+        image: minio/minio:RELEASE.2024-04-06T05-26-02Z
+        environment:
+            - MINIO_REGION=eu-west-1
+            - MINIO_ROOT_USER=minio
+            - MINIO_ROOT_PASSWORD=miniopwd
+        volumes:
+            - minio-storage:/data
+        entrypoint: sh
+        command: -c 'mkdir -p /data/my-sample-bucket && /usr/bin/docker-entrypoint.sh server /data'
+
+
+volumes:
+    minio-storage:
+    orthanc-sqlite-storage:
+
+networks:
+    test:

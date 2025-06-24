@@ -1,0 +1,38 @@
+services:
+
+  orthanc:
+    image: orthancteam/orthanc
+    depends_on: [db]
+    volumes: ["orthanc-storage:/var/lib/orthanc/db"]
+    environment:
+      ORTHANC__NAME: "Orthanc behind NGINX"
+
+      ORTHANC__POSTGRESQL__PASSWORD: "postgres"
+      ORTHANC__POSTGRESQL__USERNAME: "postgres"
+      ORTHANC__POSTGRESQL__DATABASE: "postgres"
+      ORTHANC__POSTGRESQL__HOST: "db"
+
+      STONE_WEB_VIEWER_PLUGIN_ENABLED: "true"
+      DICOM_WEB_PLUGIN_ENABLED: "true"
+      ORTHANC__DICOM_WEB__PUBLIC_ROOT: "/orthanc/dicom-web/"
+      ORTHANC__REGISTERED_USERS: |
+        {"demo": "demo"}
+    restart: unless-stopped
+
+  nginx:
+    build: nginx
+    depends_on: [orthanc]
+    restart: unless-stopped
+    ports: ["80:80"]
+
+  db:
+    image: postgres
+    restart: unless-stopped
+    volumes: ["orthanc-index:/var/lib/postgresql/data"]
+    environment:
+      POSTGRES_PASSWORD: "postgres"
+
+
+volumes:
+  orthanc-storage:
+  orthanc-index:

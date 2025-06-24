@@ -1,0 +1,17 @@
+{
+  "Name": "Orthanc-pacs",
+  "RemoteAccessAllowed": true,
+  "AuthenticationEnabled": true,
+  "RegisteredUsers": {
+    "demo": "demo"
+  },
+  "Plugins": ["/usr/share/orthanc/plugins"],
+  "DicomAet": "PACS",
+  "DicomModalities": {
+    "Worklists": ["PACS", "192.168.0.35", 5243],
+    "XC70": ["XC70", "192.168.0.221", 104],
+    "VXVUE": ["VXVUE", "192.168.0.146", 104],
+    "Carm": ["SpiderStoreSCP", "192.168.0.222", 104],
+    "findscu": ["FINDSCU", "127.0.0.1", 1234]
+  }
+}

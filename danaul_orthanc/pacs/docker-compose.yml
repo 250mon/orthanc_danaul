@@ -1,0 +1,38 @@
+services:
+  orthanc-pacs:
+    build: orthanc-pacs
+    depends_on: [index-db]
+    restart: unless-stopped
+    ports: ["4242:4242", "8042:8042"]
+    volumes: ["pacs-storage:/var/lib/orthanc/db"]
+    environment:
+      VERBOSE_ENABLED: "true"
+
+      # OSIMIS_WEB_VIEWER1_PLUGIN_ENABLED: "true"
+      DICOM_WEB_PLUGIN_ENABLED: "true"
+      OHIF_PLUGIN_ENABLED: "true"
+
+      ORTHANC__POSTGRESQL__PASSWORD: "pg-password"
+      ORTHANC__POSTGRESQL__HOST: "index-db"
+
+  index-db:
+    image: postgres
+    ports: ["5432:5432"]
+    volumes: ["index-storage:/var/lib/postgresql/data"]
+    environment:
+      POSTGRES_PASSWORD: "pg-password"
+      POSTGRES_HOST_AUTH_METHOD: "trust"
+
+volumes:
+  pacs-storage:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./orthanc-pacs/pacs-storage
+  index-storage:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./orthanc-pacs/index-storage

@@ -1,0 +1,24 @@
+services:
+
+  orthanc-a:
+    image: orthancteam/orthanc
+    ports: ["8042:8042"]
+    volumes: ["orthanc-storage-a:/var/lib/orthanc/db:Z"]
+    environment:
+      ORTHANC__NAME: "Orthanc A"
+      ORTHANC__REGISTERED_USERS: |
+        {"demo": "demo"}
+      ORTHANC__DICOM_AET: "ORTHANCA"
+      ORTHANC__DICOM_MODALITIES:
+        {
+          "b": ["ORTHANCB", "orthanc-b", 4242]
+        }
+
+  orthanc-b:
+    build: orthanc-b
+    ports: ["8043:8042"]
+    volumes: ["orthanc-storage-b:/var/lib/orthanc/db:Z"]
+
+volumes:
+  orthanc-storage-a:
+  orthanc-storage-b:

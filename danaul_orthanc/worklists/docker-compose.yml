@@ -1,0 +1,30 @@
+services:
+  orthanc-worklists:
+    image: labmki/orthanc-worklists:latest
+    container_name: orthanc-worklists
+    build: 
+      context: orthanc-worklists
+      dockerfile: Dockerfile
+      args:
+        - EMR_SERVER=${EMR_SERVER:-localhost}
+        - EMR_PORT=${EMR_PORT:-1433}
+        - EMR_DATABASE=${EMR_DATABASE:-EmrDb}
+        - EMR_DSN=${EMR_DSN:-EmrDb}
+        - EMR_USER=${EMR_USER:-sa}
+        - EMR_PASSWORD=${EMR_PASSWORD:-Password123}
+    restart: unless-stopped
+    ports: ["4243:4242", "5243:5243", "8043:8042"]
+    volumes:
+      - "./orthanc-worklists/WorklistsDatabase:/etc/orthanc/WorklistsDatabase"
+    environment:
+      - VERBOSE_ENABLED=true
+      - OSIMIS_WEB_VIEWER1_PLUGIN_ENABLED=true
+      - EMR_SERVER=${EMR_SERVER:-localhost}
+      - EMR_PORT=${EMR_PORT:-1433}
+      - EMR_DATABASE=${EMR_DATABASE:-EmrDb}
+      - EMR_DSN=${EMR_DSN:-EmrDb}
+      - EMR_USER=${EMR_USER:-sa}
+      - EMR_PASSWORD=${EMR_PASSWORD:-Password123}
+      - MODALITY_AET_CR=${MODALITY_AET_CR:-VXVUE}
+      - MODALITY_AET_US=${MODALITY_AET_US:-XC70}
+      - MODALITY_AET_RF=${MODALITY_AET_RF:-SpiderStoreSCP}

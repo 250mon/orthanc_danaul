@@ -1,0 +1,7 @@
+.idea/
+.vs/
+.vscode/
+docker/couchdb/
+docker/python-bug/
+*~
+**/__pycache__/*

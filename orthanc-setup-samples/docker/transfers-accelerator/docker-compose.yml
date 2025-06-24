@@ -1,0 +1,52 @@
+services:
+
+  orthanc-a:
+    image: orthancteam/orthanc
+    ports: ["8042:8042"]
+    volumes:
+      - orthanc-a:/var/lib/orthanc/db
+    restart: unless-stopped
+    environment:
+      ORTHANC__NAME: "Orthanc A"
+      ORTHANC__REGISTERED_USERS: |
+        { "demo" : "demo" }
+      ORTHANC__ORTHANC_PEERS: |
+        {
+            "orthanc-b": {
+              "Url": "http://orthanc-b:8042/", 
+              "Username": "demo",
+              "Password": "demo",
+              "RemoteSelf": "orthanc-a"
+            }
+        }
+
+      VERBOSE_ENABLED: "true"
+
+      TRANSFERS_PLUGIN_ENABLED: "true"
+      ORTHANC__TRANSFERS__MAX_HTTP_RETRIES: 5
+
+
+  orthanc-b:
+    image: orthancteam/orthanc
+    ports: ["8043:8042"]
+    volumes:
+      - orthanc-b:/var/lib/orthanc/db
+    restart: unless-stopped
+    environment:
+      ORTHANC__NAME: "Orthanc B"
+      ORTHANC__REGISTERED_USERS: |
+        { "demo" : "demo" }
+      ORTHANC__ORTHANC_PEERS: |
+        {
+          "orthanc-a": ["http://orthanc-a:8042/", "demo", "demo"]
+        }
+
+      VERBOSE_ENABLED: "true"
+
+      TRANSFERS_PLUGIN_ENABLED: "true"
+      ORTHANC__TRANSFERS__MAX_HTTP_RETRIES: 5
+
+
+volumes:
+  orthanc-a:
+  orthanc-b:

@@ -1,0 +1,13 @@
+services:
+
+  orthanc-a:
+    build: orthanc-a
+    volumes: 
+      - orthanc-storage-a:/var/lib/orthanc/db/
+    ports: ["8045:8042"]
+  orthanc-b:
+    build: orthanc-b
+    ports: ["8046:8042"]
+
+volumes:
+  orthanc-storage-a:

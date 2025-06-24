@@ -1,0 +1,26 @@
+# Purpose
+
+This is a sample setup to demonstrate how to configure Orthanc with a
+MSSQL database for its index using the [ODBC plugin](https://book.orthanc-server.com/plugins/odbc.html).
+
+# Description
+
+This demo contains:
+
+- an Orthanc container with the ODBC plugin enabled.  Note that this container uses the `-full` image tag
+  to select the image including the MSODBC drivers.
+- a MSSQL container that will store the Orthanc Index DB (the dicom files are stored in a Docker volume)
+
+The MSSQL container has been customized to create the Orthanc DB at startup.
+
+
+# Starting the setup
+
+To start the setup, type: `docker-compose up --build` to access the logs later on.
+
+# demo
+
+As described in the `docker-compose.yml` file, Orthanc's HTTP server is
+reachable via port 8042 on the Docker host (try
+[http://localhost:8042](http://localhost:8042)), and Orthanc's DICOM server is
+reachable via port 104 on the Docker host.
