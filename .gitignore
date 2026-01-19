@@ -5,3 +5,5 @@ docker/couchdb/
 docker/python-bug/
 *~
 **/__pycache__/*
+**/pacs-storage/
+**/index-storage/
