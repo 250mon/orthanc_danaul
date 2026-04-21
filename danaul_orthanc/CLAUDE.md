@@ -93,6 +93,27 @@ Copy `.env.example` to `.env` and configure:
 ## Key Technical Details
 
 - The worklist server runs an independent pynetdicom server alongside Orthanc because Orthanc doesn't support MPPS natively
-- Korean patient names are automatically romanized using `korean-romanizer` for US modality compatibility
+- Korean patient names are automatically romanized using `korean-romanizer` for US modality compatibility; US modality responses use the romanized English name, all other modalities use the original Korean name
 - Worklist items sync from EMR both on a 5-minute interval AND on every C-FIND request
 - SQLite database stored at `/etc/orthanc/WorklistsDatabase/worklist.db` (mounted volume for persistence)
+- In-memory MPPS state (`managed_instances` dict in `worklist-with-mpps.py`) is lost on server restart; completed MPPS operations are persisted in SQLite but N-SET for unrecognized UIDs will fail after restart
+- FreeTDS/ODBC configuration (server host, port, DSN) is baked into the worklist Docker image at build time — changing `EMR_SERVER`/`EMR_PORT` requires `docker compose up -d --build`
+- `pacs/orthanc-pacs/euckr_to_utf8.py` is bind-mounted into the PACS container (not copied in Dockerfile), so edits to that file take effect after a container restart without rebuild
+
+## EMR Database Schema
+
+EMR orders are fetched from SQL Server table `PcsInf`:
+
+| Column | Meaning |
+|--------|---------|
+| `PcsOdrSeq` | Order sequence (auto-increment, used as cursor for incremental sync) |
+| `PcsOdrDtm` | Order datetime (appointment) |
+| `PcsUntCod` | Modality code (CR, US, RF, etc.) |
+| `PcsPatNam` | Patient name (Korean) |
+| `PcsChtNum` | Patient/chart number (patient ID) |
+| `PcsBirDte` | Birth date |
+| `PcsSexTyp` | Sex |
+| `PcsDelFlg` | Deleted flag (`N` = not deleted) |
+| `PcsStatus` | Status updated back from worklist (`IP` = in progress, `CO` = completed) |
+
+Accession numbers are zero-padded `PcsOdrSeq` (8 digits).

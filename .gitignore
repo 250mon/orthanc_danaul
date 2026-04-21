@@ -1,6 +1,13 @@
 .idea/
 .vs/
 .vscode/
+.codex
+.venv/
+**/.venv/
+**/.pytest_cache/
+**/.mypy_cache/
+**/*.pyc
+**/__pycache__/
 docker/couchdb/
 docker/python-bug/
 *~

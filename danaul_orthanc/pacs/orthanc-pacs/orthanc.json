@@ -1,17 +1,54 @@
 {
-  "Name": "Orthanc-pacs",
+  "Name": "Danaul_PACS",
   "RemoteAccessAllowed": true,
   "AuthenticationEnabled": true,
   "RegisteredUsers": {
     "demo": "demo"
   },
+  "DicomAet": "Danaul_PACS",
+
   "Plugins": ["/usr/share/orthanc/plugins"],
-  "DicomAet": "PACS",
-  "DicomModalities": {
-    "Worklists": ["PACS", "192.168.0.35", 5243],
-    "XC70": ["XC70", "192.168.0.221", 104],
-    "VXVUE": ["VXVUE", "192.168.0.146", 104],
-    "Carm": ["SpiderStoreSCP", "192.168.0.222", 104],
-    "findscu": ["FINDSCU", "127.0.0.1", 1234]
+
+  "PythonScript": "/etc/orthanc/euckr_to_utf8.py",
+  "DefaultEncoding": "Korean",
+
+  "DicomWeb": {
+    "Enable": true, // Whether DICOMweb support is enabled
+    "Root": "/dicom-web/", // Root URI of the DICOMweb API (for QIDO-RS, STOW-RS and WADO-RS)
+    "EnableWado": true, // Whether WADO-URI (previously known as WADO) support is enabled
+    "WadoRoot": "/wado", // Root URI of the WADO-URI (aka. WADO) API
+    "Ssl": false, // Whether HTTPS should be used for subsequent WADO-RS requests.
+    // If Orthanc is behind a reverse-proxy, the 'forwarded' headers will be used instead of the config.
+    "QidoCaseSensitive": true, // For QIDO-RS server, whether search is case sensitive (since release 0.5)
+    "Host": "", // Hard-codes the name of the host for subsequent WADO-RS requests.
+    // e.g: "localhost:8042", "dicomweb.mydomain.org"
+    // If empty (default), the plugin will guess it from other configurations or
+    // from the reverse-proxy 'forwarded' headers.
+    "StudiesMetadata": "Full", // How study-level metadata is retrieved (since release 1.1, cf. section below)
+    "SeriesMetadata": "Full", // How series-level metadata is retrieved (since release 1.1, cf. section below)
+    "EnableMetadataCache": true, // Wheter the plugin caches metadata as a gzipped attachment (since release 1.15)
+    "EnablePerformanceLogs": false, // Wheter to show more detailed logs about performances (since release 1.21)
+    "MetadataWorkerThreadsCount": 4, // The number of concurrent threads that are used to extract the metadata in Full mode
+    // (since release 1.14)
+    "WadoRsLoaderThreadsCount": 0, // The number of concurrent threads that are used to read the files from the storage
+    // when answering a WADO-RS call at study or series level.  A value > 1 is meaningful
+    // only if the storage is a distributed network storage (e.g an object storage plugin).
+    // A value of 0 means reading and writing are performed in sequence (default behaviour).
+    // (since release 1.21)
+    "PublicRoot": "/dicom-web/", // The public Root URI of the DICOMweb API in case it is different from "Root".
+    // This is useful if, e.g, your Orthanc is behind a reverse-proxy and has another
+    // base endpoint than the "Root" one.  Note that, if using a reverse-proxy, make sure to set the "host"
+    // and "proto" correctly in the "Forwarded" HTTP headers.
+    // (since release 1.8)
+    "Servers": {
+      "sample": ["http://localhost:8042/dicom-web/", "demo", "demo"]
+    }
   }
+  //  "DicomModalities": {
+  //    "Worklists": ["PACS", "192.168.0.35", 5243],
+  //    "XC70": ["XC70", "192.168.0.221", 104],
+  //    "VXVUE": ["VXVUE", "192.168.0.146", 104],
+  //    "Carm": ["SpiderStoreSCP", "192.168.0.222", 104],
+  //    "findscu": ["FINDSCU", "127.0.0.1", 1234]
+  //  }
 }

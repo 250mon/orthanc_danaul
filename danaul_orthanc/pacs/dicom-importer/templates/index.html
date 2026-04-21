@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DICOM Importer</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { padding: 2rem; }
+    #results-section { display: none; }
+    .status-cell { min-width: 140px; }
+    #drop-zone {
+      border: 2px dashed #adb5bd;
+      border-radius: .5rem;
+      padding: 3rem 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+    }
+    #drop-zone:hover, #drop-zone.drag-over {
+      border-color: #0d6efd;
+      background: #f0f4ff;
+    }
+    #drop-zone .icon { font-size: 3rem; line-height: 1; }
+  </style>
+</head>
+<body>
+  <h1 class="mb-4">DICOM Importer</h1>
+
+  <!-- Folder picker -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <div id="drop-zone" onclick="document.getElementById('folder-input').click()"
+           ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+        <div class="icon">&#128193;</div>
+        <div class="mt-2 fw-semibold">Click to select a folder</div>
+        <div class="text-muted small">or drag and drop a folder here</div>
+      </div>
+      <!-- webkitdirectory lets the browser open a native folder picker -->
+      <input type="file" id="folder-input" webkitdirectory multiple style="display:none"
+             onchange="onFolderSelected(this.files)">
+      <div id="scan-status" class="mt-3" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- Results table -->
+  <div id="results-section">
+    <h5 class="mb-3">Detected Patient Folders</h5>
+    <div class="table-responsive mb-3">
+      <table class="table table-bordered align-middle">
+        <thead class="table-light">
+          <tr>
+            <th><input type="checkbox" id="select-all" checked onchange="toggleAll(this)"></th>
+            <th>Folder</th>
+            <th>Files</th>
+            <th>Detected ID</th>
+            <th>Detected Name</th>
+            <th>New Patient ID</th>
+            <th>New Patient Name</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="results-body"></tbody>
+      </table>
+    </div>
+    <button class="btn btn-success" id="upload-btn" onclick="doUpload()">Upload Selected</button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // Map: groupKey → { folderName, files: File[] }
+    let groups = new Map();
+
+    // ── Drag-and-drop support ─────────────────────────────────────────────────
+    function onDragOver(e) {
+      e.preventDefault();
+      document.getElementById('drop-zone').classList.add('drag-over');
+    }
+    function onDragLeave(e) {
+      document.getElementById('drop-zone').classList.remove('drag-over');
+    }
+    function onDrop(e) {
+      e.preventDefault();
+      document.getElementById('drop-zone').classList.remove('drag-over');
+      // Drag-and-drop folder: use the file input fallback message
+      // (DataTransferItem.getAsEntry() is read-only security-restricted in most browsers)
+      // Tell user to use the click-to-select instead.
+      const items = e.dataTransfer.items;
+      if (items && items[0] && items[0].webkitGetAsEntry && items[0].webkitGetAsEntry().isDirectory) {
+        showScanStatus('warning', 'Drag-and-drop of folders is not supported by browsers. Please click to select a folder.');
+        return;
+      }
+      // If they dropped files directly, process them
+      if (e.dataTransfer.files.length > 0) {
+        onFolderSelected(e.dataTransfer.files);
+      }
+    }
+
+    // ── Folder selected ───────────────────────────────────────────────────────
+    async function onFolderSelected(fileList) {
+      const allFiles = Array.from(fileList);
+      if (allFiles.length === 0) return;
+
+      document.getElementById('results-section').style.display = 'none';
+      groups = new Map();
+
+      // Group files by their immediate subfolder within the selected root.
+      // webkitRelativePath looks like:  RootFolder/SubFolder/file.dcm
+      //                             or  RootFolder/file.dcm  (flat)
+      for (const file of allFiles) {
+        const parts = file.webkitRelativePath.split('/');
+        // parts[0] = selected root folder name
+        const key = parts.length > 2 ? parts[1] : '__root__';
+        const label = parts.length > 2 ? parts[1] : parts[0];
+        if (!groups.has(key)) {
+          groups.set(key, { folderName: label, files: [] });
+        }
+        groups.get(key).files.push(file);
+      }
+
+      showScanStatus('info', `Found ${groups.size} folder(s) with ${allFiles.length} file(s) total. Scanning metadata…`);
+
+      // For each group, send the first file to /scan-file to read DICOM tags.
+      const rows = [];
+      for (const [key, group] of groups) {
+        const meta = await scanFirstFile(group.files[0]);
+        rows.push({
+          key,
+          folderName: group.folderName,
+          fileCount: group.files.length,
+          detectedId: meta.detectedId,
+          detectedName: meta.detectedName,
+        });
+      }
+
+      renderTable(rows);
+      document.getElementById('results-section').style.display = 'block';
+      showScanStatus('success', `Scan complete — ${rows.length} folder(s) detected.`);
+    }
+
+    async function scanFirstFile(file) {
+      try {
+        const fd = new FormData();
+        fd.append('file', file);
+        const resp = await fetch('/scan-file', { method: 'POST', body: fd });
+        if (!resp.ok) return { detectedId: '', detectedName: '' };
+        return await resp.json();
+      } catch {
+        return { detectedId: '', detectedName: '' };
+      }
+    }
+
+    // ── Table rendering ───────────────────────────────────────────────────────
+    function renderTable(rows) {
+      const tbody = document.getElementById('results-body');
+      tbody.innerHTML = '';
+      rows.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.dataset.key = row.key;
+        tr.innerHTML = `
+          <td class="text-center"><input type="checkbox" class="row-select" checked
+                onchange="syncSelectAll()"></td>
+          <td>${esc(row.folderName)}</td>
+          <td>${row.fileCount}</td>
+          <td>${esc(row.detectedId)}</td>
+          <td>${esc(row.detectedName)}</td>
+          <td><input type="text" class="form-control form-control-sm new-id"
+                     value="${esc(row.detectedId)}"></td>
+          <td><input type="text" class="form-control form-control-sm new-name"
+                     value="${esc(row.detectedName)}"></td>
+          <td class="status-cell text-muted">—</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // ── Select-all helpers ────────────────────────────────────────────────────
+    function toggleAll(master) {
+      document.querySelectorAll('.row-select').forEach(cb => cb.checked = master.checked);
+    }
+
+    function syncSelectAll() {
+      const all = document.querySelectorAll('.row-select');
+      const checked = document.querySelectorAll('.row-select:checked');
+      const master = document.getElementById('select-all');
+      master.indeterminate = checked.length > 0 && checked.length < all.length;
+      master.checked = checked.length === all.length;
+    }
+
+    // ── Upload ────────────────────────────────────────────────────────────────
+    async function doUpload() {
+      const rows = Array.from(document.querySelectorAll('#results-body tr'))
+                        .filter(tr => tr.querySelector('.row-select').checked);
+      if (rows.length === 0) { alert('No folders selected.'); return; }
+
+      const btn = document.getElementById('upload-btn');
+      btn.disabled = true;
+
+      for (const tr of rows) {
+        const key = tr.dataset.key;
+        const patientId = tr.querySelector('.new-id').value;
+        const patientName = tr.querySelector('.new-name').value;
+        const group = groups.get(key);
+        const cell = tr.querySelector('.status-cell');
+
+        cell.innerHTML = '<span class="text-muted">Uploading…</span>';
+        btn.textContent = `Uploading ${tr.querySelectorAll('td')[1].textContent}…`;
+
+        try {
+          const fd = new FormData();
+          fd.append('patientId', patientId);
+          fd.append('patientName', patientName);
+          for (const file of group.files) {
+            fd.append('files', file);
+          }
+
+          const resp = await fetch('/upload-files', { method: 'POST', body: fd });
+          const result = await resp.json();
+
+          if (!resp.ok) {
+            cell.innerHTML = `<span class="text-danger">Error: ${esc(result.error || resp.statusText)}</span>`;
+          } else if (result.failed === 0) {
+            cell.innerHTML = `<span class="text-success">&#10003; ${result.imported} imported</span>`;
+          } else {
+            cell.innerHTML = `<span class="text-warning">&#10003; ${result.imported} / &#10007; ${result.failed} failed</span>`;
+          }
+        } catch (err) {
+          cell.innerHTML = `<span class="text-danger">Network error</span>`;
+        }
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Upload Selected';
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    function showScanStatus(type, msg) {
+      const el = document.getElementById('scan-status');
+      const cls = { info: 'alert-info', success: 'alert-success', warning: 'alert-warning', danger: 'alert-danger' };
+      el.className = `alert ${cls[type] || 'alert-info'}`;
+      el.textContent = msg;
+      el.style.display = '';
+    }
+
+    function esc(s) {
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+  </script>
+</body>
+</html>
