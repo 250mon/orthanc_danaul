@@ -12,5 +12,7 @@ docker/couchdb/
 docker/python-bug/
 *~
 **/__pycache__/*
-**/pacs-storage/
-**/index-storage/
+**/pacs-storage/*
+!**/pacs-storage/.gitignore
+**/index-storage/*
+!**/index-storage/.gitignore
