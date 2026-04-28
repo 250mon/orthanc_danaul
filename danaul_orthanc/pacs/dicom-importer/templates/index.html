@@ -82,18 +82,67 @@
     function onDrop(e) {
       e.preventDefault();
       document.getElementById('drop-zone').classList.remove('drag-over');
-      // Drag-and-drop folder: use the file input fallback message
-      // (DataTransferItem.getAsEntry() is read-only security-restricted in most browsers)
-      // Tell user to use the click-to-select instead.
+
       const items = e.dataTransfer.items;
-      if (items && items[0] && items[0].webkitGetAsEntry && items[0].webkitGetAsEntry().isDirectory) {
-        showScanStatus('warning', 'Drag-and-drop of folders is not supported by browsers. Please click to select a folder.');
-        return;
+      if (items && items.length > 0 && items[0].webkitGetAsEntry) {
+        const entries = Array.from(items)
+          .map(item => item.webkitGetAsEntry())
+          .filter(Boolean);
+        if (entries.length > 0) {
+          showScanStatus('info', 'Reading dropped folder…');
+          collectFilesFromEntries(entries).then(fileWithPaths => {
+            if (fileWithPaths.length === 0) {
+              showScanStatus('warning', 'No files found in dropped folder.');
+              return;
+            }
+            // Attach reconstructed relative paths so onFolderSelected can group by subfolder
+            const files = fileWithPaths.map(({ file, path }) => {
+              file._dropPath = path;
+              return file;
+            });
+            onFolderSelected(files);
+          });
+          return;
+        }
       }
-      // If they dropped files directly, process them
+      // Fallback: flat file drop (no folder traversal needed)
       if (e.dataTransfer.files.length > 0) {
         onFolderSelected(e.dataTransfer.files);
       }
+    }
+
+    // Recursively collect all files from an array of FileSystemEntry objects.
+    function collectFilesFromEntries(entries) {
+      return Promise.all(entries.map(e => traverseEntry(e, e.name)))
+                    .then(results => results.flat());
+    }
+
+    function traverseEntry(entry, path) {
+      if (entry.isFile) {
+        return new Promise(resolve => {
+          entry.file(file => resolve([{ file, path }]), () => resolve([]));
+        });
+      }
+      if (entry.isDirectory) {
+        return new Promise(resolve => {
+          const reader = entry.createReader();
+          const pending = [];
+          function readBatch() {
+            reader.readEntries(batch => {
+              if (batch.length === 0) {
+                Promise.all(pending).then(results => resolve(results.flat()));
+              } else {
+                for (const child of batch) {
+                  pending.push(traverseEntry(child, path + '/' + child.name));
+                }
+                readBatch(); // readEntries returns at most 100 entries per call
+              }
+            }, () => resolve([]));
+          }
+          readBatch();
+        });
+      }
+      return Promise.resolve([]);
     }
 
     // ── Folder selected ───────────────────────────────────────────────────────
@@ -105,10 +154,11 @@
       groups = new Map();
 
       // Group files by their immediate subfolder within the selected root.
-      // webkitRelativePath looks like:  RootFolder/SubFolder/file.dcm
-      //                             or  RootFolder/file.dcm  (flat)
+      // webkitRelativePath (file input):  RootFolder/SubFolder/file.dcm
+      // _dropPath (drag-and-drop):        RootFolder/SubFolder/file.dcm  (same shape)
       for (const file of allFiles) {
-        const parts = file.webkitRelativePath.split('/');
+        const relativePath = file._dropPath || file.webkitRelativePath || file.name;
+        const parts = relativePath.split('/');
         // parts[0] = selected root folder name
         const key = parts.length > 2 ? parts[1] : '__root__';
         const label = parts.length > 2 ? parts[1] : parts[0];

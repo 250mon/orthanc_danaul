@@ -36,6 +36,7 @@ services:
     build: ./dicom-importer
     container_name: dicom-importer
     restart: unless-stopped
+    profiles: [prod]
     ports:
       - "5000:5000"
     depends_on:
@@ -44,6 +45,23 @@ services:
       ORTHANC_URL: "http://orthanc-pacs:8042"
       ORTHANC_USER: "demo"
       ORTHANC_PASSWORD: "demo"
+
+  dicom-importer-dev:
+    build: ./dicom-importer
+    container_name: dicom-importer
+    restart: unless-stopped
+    profiles: [dev]
+    ports:
+      - "5000:5000"
+    depends_on:
+      - orthanc-pacs
+    volumes:
+      - ./dicom-importer:/app
+    environment:
+      ORTHANC_URL: "http://orthanc-pacs:8042"
+      ORTHANC_USER: "demo"
+      ORTHANC_PASSWORD: "demo"
+      FLASK_DEBUG: "1"
 
 volumes:
   pacs-storage:
